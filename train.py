@@ -92,6 +92,7 @@ model.compile(optimizer=adam,
                     feature_reconstruction_loss,
                     total_variation_loss])
 
+# Dummy arrays
 _1 = np.empty((1, 256, 256, 64))
 _2 = np.empty((1, 128, 128, 128))
 _3 = np.empty((1, 64, 64, 256))
@@ -99,13 +100,14 @@ _4 = np.empty((1, 32, 32, 512))
 _5 = np.empty((1, 64, 64, 256))
 _6 = np.empty((1, 256, 256, 3))
 
+
+print("Now loading contents image feature...")
 cis = []
 contents_imgs = []
 
 cis_append = cis.append
 contents_imgs_append = contents_imgs.append
 
-print("Now loading contents image feature...")
 for path in imagepaths:
     contents_img = load_image(path, image_size)
     contents_imgs_append(contents_img)
@@ -124,29 +126,13 @@ def generate_arrays_from_file(contents_imgs, cis):
         for contents_img, ci in zip(contents_imgs, cis):
             yield (contents_img, [_1, _2, _3, _4, ci, _6])
 
-def process_line(path, image_size):
-    # dummy arrays
-    _1 = np.empty((1, 256, 256, 64))
-    _2 = np.empty((1, 128, 128, 128))
-    _3 = np.empty((1, 64, 64, 256))
-    _4 = np.empty((1, 32, 32, 512))
-    _5 = np.empty((1, 64, 64, 256))
-    _6 = np.empty((1, 256, 256, 3))
-
-    #contents_img.shape is (1, 256, 256, 3)
-    contents_img = load_image(path, image_size)
-    print(contents_img)
-    #contents_img = load_image("./sample_imgs/tubingen.jpg", image_size)
-    ci_f = get_contents_features(contents_img)
-    ci_f = K.get_value(ci_f)
-    return img, [_1, _2, _3, _4, ci_f, _6]
-
 model.fit_generator(generate_arrays_from_file(contents_imgs, cis),
                     samples_per_epoch=nb_data,
                     nb_epoch=nb_epoch)
 
 style_name = args.style_image.split("/")[-1].split(".")[0]
-print(style_name)
+
+print("Save weights")
 if not os.path.exists("./weights"):
     os.mkdir("weights")
 fsn.save_weights("./weights/{}.hdf5".format(style_name))
