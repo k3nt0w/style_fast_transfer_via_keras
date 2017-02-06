@@ -3,18 +3,20 @@
 Implementation of ["Perceptual Losses for Real-Time Style Transfer and Super-Resolution"](https://arxiv.org/abs/1603.08155)
  in Keras 1.2.0.
 
-I used this [chainer Implementation](https://arxiv.org/abs/1603.08155) as a very useful reference.  
+I used this [chainer Implementation](https://arxiv.org/abs/1603.08155) and [Keras exmaple](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) for as a reference.  
 
-By the way, I think the example of [neural_style_transfer](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) is a little confusing. For that reason, I implemented it in a way very different from the example.
+However, I think that the [Keras example](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) is a little confusing. That's why, I implemented it in a way very different from the example.
+
+I will explain this implementation method on [my blog](http://www.mathgram.xyz) so please refer it.
 
 I hope this implementation method will be of your help.
 
-##Requirement
+## Requirement
 + Keras v1.2.0
 ```
 $ pip install keras
 ```
-! caution : I always use tensorflow as backend. So, if you use theano, this won't work. Then, please change the backend.
+! caution : I always use tensorflow as backend. So, if you use theano, the program won't work. Then, please change the backend.
 
 ## Usage
 #### train phase
@@ -26,8 +28,12 @@ $ python train.py -d <path/to/dataset> -s <path/to/sample image>
 #### generate phase
 
 ```
-$ python train.py -i <path/to/contents image> -w <path/to/weights of style>
+$ python generate.py -i <path/to/contents image> -w <path/to/weights of style>
+```
+example
+```
+$ python generate.py -i <path/to/contents image> -w <path/to/weights of style>
 ```
 
 ## Example
-I trained the network only 2 epochs with MSCOCO dataset. If you wanna generate more beautiful image, please increase the number of epoch and retrain the net.
+I trained the network only 2 epochs per style image with [MSCOCO dataset](http://mscoco.org/dataset/#download). If you wanna generate more beautiful image, please increase the number of epoch and retrain the net.

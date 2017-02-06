@@ -95,7 +95,7 @@ def connect_vgg16():
     for_tv = fsn(ip1)
 
     # I think that it can be done more easily here...
-    # Please some idea.
+    # Please give me some idea.
     h  = vgg16.layers[1](for_tv)
     y1 = vgg16.layers[2](h)
     h  = vgg16.layers[3](y1)
