@@ -78,7 +78,7 @@ print(nb_data, 'iterations,', nb_epoch, 'epochs')
 model, fsn = connect_vgg16()
 
 style_img = load_image(args.style_image, args.image_size)
-#contents_img = load_image(imagepaths[0], args.image_size)
+contents_img = load_image(imagepaths[0], args.image_size)
 
 style_features = get_style_features(style_img)
 y1, y2, y3, y4 = [gram_matrix(y) for y in style_features]
@@ -99,16 +99,30 @@ _4 = np.empty((1, 32, 32, 512))
 _5 = np.empty((1, 64, 64, 256))
 _6 = np.empty((1, 256, 256, 3))
 
-#ci = get_contents_features(contents_img)
-#ci = K.eval(ci)
-#model.fit(contents_img, [_1, _2, _3, _4, ci, _6])
+cis = []
+contents_imgs = []
 
-def generate_arrays_from_file(paths, image_size):
+cis_append = cis.append
+contents_imgs_append = contents_imgs.append
+
+print("Now loading contents image feature...")
+for path in imagepaths:
+    contents_img = load_image(path, image_size)
+    contents_imgs_append(contents_img)
+
+    ci = get_contents_features(contents_img)
+    ci = K.eval(ci)
+    cis_append(ci)
+print("Done!, Start training.")
+print("-------------------------------------")
+
+ci = get_contents_features(contents_img)
+ci = K.eval(ci)
+
+def generate_arrays_from_file(contents_imgs, cis):
     while True:
-        contents_img = load_image(path, image_size)
-        ci = get_contents_features(contents_img)
-        ci = K.eval(ci)
-        yield (contents_img, [_1, _2, _3, _4, ci, _6])
+        for contents_img, ci in zip(contents_imgs, cis):
+            yield (contents_img, [_1, _2, _3, _4, ci, _6])
 
 def process_line(path, image_size):
     # dummy arrays
@@ -127,19 +141,12 @@ def process_line(path, image_size):
     ci_f = K.get_value(ci_f)
     return img, [_1, _2, _3, _4, ci_f, _6]
 
-"""
-こんなtuppleを
-(contents_img, [_1, _2, _3, _4, ci, _6])
-yeildする.
-"""
-model.fit_generator(generate_arrays_from_file(imagepaths, image_size),
+model.fit_generator(generate_arrays_from_file(contents_imgs, cis),
                     samples_per_epoch=nb_data,
                     nb_epoch=nb_epoch)
 
-"""
 style_name = args.style_image.split("/")[-1].split(".")[0]
 print(style_name)
 if not os.path.exists("./weights"):
     os.mkdir("weights")
 fsn.save_weights("./weights/{}.hdf5".format(style_name))
-"""

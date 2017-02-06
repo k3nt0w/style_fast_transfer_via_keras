@@ -12,10 +12,7 @@ import numpy as np
 from keras.applications.vgg16 import VGG16
 
 vgg16 = VGG16(include_top=False, weights='imagenet', input_tensor=None, input_shape=(256,256,3))
-outputs_dict = dict([(layer.name, layer.output) for layer in vgg16.layers])
-feature_layers = ['block1_conv1', 'block2_conv1',
-                  'block3_conv1', 'block4_conv1',
-                  'block5_conv1']
+
 class ResidualBlock(Layer):
     def __init__(self, nb_filter, nb_row, nb_col, subsample=(1,1), **kwargs):
         self.nb_filter = nb_filter
@@ -112,26 +109,9 @@ def connect_vgg16():
     model = Model(inputs, output= [y1, y2, y3, y4, y3, tv])
     return model, fsn
 
-"""
-def get_content_feature(inputs):
-    h  = vgg16.layers[ 0](inputs)
-    h  = vgg16.layers[ 1](inputs)
-    h  = vgg16.layers[ 2](h)
-    h  = vgg16.layers[ 3](h)
-    h  = vgg16.layers[ 4](h)
-    h  = vgg16.layers[ 5](h)
-    h  = vgg16.layers[ 6](h)
-    h  = vgg16.layers[ 7](h)
-    h  = vgg16.layers[ 8](h)
-    y3 = vgg16.layers[ 9](h)
-    return y3
-"""
-
 if __name__ == "__main__":
     from keras.utils.visualize_util import plot
     model, fsn = connect_vgg16()
     plot(fsn, "fsn.png", show_shapes=True)
     plot(model, "train_model.png", show_shapes=True)
     print(model.summary())
-    #a = model.predict(x)[0]
-    #print(a.shape)
