@@ -7,6 +7,7 @@ from keras import backend as K
 
 import argparse
 import os
+import sys
 
 def gram_matrix(x):
     x = x[0,:,:,:] # (row, col, ch)
@@ -101,22 +102,27 @@ _5 = np.empty((1, 64, 64, 256))
 _6 = np.empty((1, 256, 256, 3))
 
 
-print("Now loading contents image feature...")
+
 cis = []
 contents_imgs = []
 
 cis_append = cis.append
 contents_imgs_append = contents_imgs.append
 
-for path in imagepaths:
+for i, path in enumerate(imagepaths):
     contents_img = load_image(path, image_size)
     contents_imgs_append(contents_img)
 
     ci = get_contents_features(contents_img)
     ci = K.eval(ci)
     cis_append(ci)
-print("Done!, Start training.")
+    sys.stdout.write("\rNow loading contents image feature: {} / {}".format(i+1 ,nb_data))
+    sys.stdout.flush()
+
+sys.stdout.write("\n")
 print("-------------------------------------")
+print("Start training.")
+
 
 ci = get_contents_features(contents_img)
 ci = K.eval(ci)
