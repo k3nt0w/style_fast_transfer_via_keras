@@ -1,9 +1,9 @@
+from model import *
+from keras import backend as K
+
 import numpy as np
 from PIL import Image
 import os
-from model import *
-
-from keras import backend as K
 
 def load_image(path, size):
     image = Image.open(path).convert('RGB')
@@ -17,7 +17,7 @@ def load_image(path, size):
             image = image.resize((size*w//h, size))
             w, h = image.size
     image = image.crop((int((w-size)*0.5), int((h-size)*0.5), int((w+size)*0.5), int((h+size)*0.5)))
-    image = np.asarray(image, dtype=np.float32) #.transpose(2, 0, 1)
+    image = np.asarray(image, dtype=np.float32)
     return image[np.newaxis, :]
 
 def get_style_features(style_img):

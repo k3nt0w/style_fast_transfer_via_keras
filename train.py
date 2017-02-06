@@ -8,8 +8,11 @@ from keras import backend as K
 import argparse
 import os
 import sys
+from multiprocessing import Pool, Process
 
 def gram_matrix(x):
+    # I reffered to
+    # "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
     x = x[0,:,:,:] # (row, col, ch)
     nrow, ncol, nch = K.int_shape(x)
     assert K.ndim(x) == 3
@@ -21,30 +24,35 @@ def mean_squared_error(y_true, y_pred, ax):
     return K.mean(K.square(y_pred - y_true), axis=ax)
 
 def style_reconstruction_loss(gram_s):
+    # Since params of vgg16 are not change,
+    # so we should calculate gram_s just once.
+    # Therefore, I implemented it like this.
     def loss_function(y_true, y_pred):
         gram_s_hat = gram_matrix(y_pred)
         return lambda_s*mean_squared_error(gram_s, gram_s_hat, ax=-1)
     return loss_function
 
 def feature_reconstruction_loss(y_true, y_pred):
-    return lambda_f*mean_squared_error(y_true, y_pred, ax=-1)
+    # This function will receive a tensor that
+    # already calculated the square error.
+    # So, just calculate the average
+    return lambda_f*K.mean(y_pred, axis=-1)
 
 def total_variation_loss(y_true, x):
+    # I reffered to
+    # "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
     assert K.ndim(x) == 4
-    img_nrows = 256
-    img_ncols = 256
+    img_nrows = image_size
+    img_ncols = image_size
     a = K.square(x[:, :img_nrows - 1, :img_ncols - 1, :] - x[:, 1:, :img_ncols - 1, :])
     b = K.square(x[:, :img_nrows - 1, :img_ncols - 1, :] - x[:, :img_nrows - 1, 1:, :])
     return lambda_tv*K.sum(K.pow(a + b, 1.25))
 
-# train phase
 parser = argparse.ArgumentParser(description='Real-time style transfer via Keras')
 parser.add_argument('--dataset', '-d', default='dataset', type=str,
                     help='dataset directory path (according to the paper, use MSCOCO 80k images)')
 parser.add_argument('--style_image', '-s', type=str, required=True,
                     help='style image path')
-parser.add_argument('--initmodel', '-i', default=None, type=str,
-                    help='initialize the model from given file')
 parser.add_argument('--lambda_tv', default=1e-6, type=float,
                     help='weight of total variation regularization according to the paper to be set between 10e-4 and 10e-6.')
 parser.add_argument('--lambda_feat', default=1.0, type=float)
@@ -61,9 +69,8 @@ lambda_tv = args.lambda_tv
 lambda_f = args.lambda_feat
 lambda_s = args.lambda_style
 
+# "imagepaths" is a list containing absolute paths of Dataset.
 fs = os.listdir(args.dataset)
-
-# "imagepaths" is a list containing absolute paths.
 imagepaths = []
 for fn in fs:
     base, ext = os.path.splitext(fn)
@@ -94,51 +101,30 @@ model.compile(optimizer=adam,
                     total_variation_loss])
 
 # Dummy arrays
+# When we use fit(X, y) function,
+# we must set same shape arrays between X and y.
+# However, we want to apply array of different shape to the objective function.
+# So, we prepare for Dummy arrays.
 _1 = np.empty((1, 256, 256, 64))
 _2 = np.empty((1, 128, 128, 128))
 _3 = np.empty((1, 64, 64, 256))
 _4 = np.empty((1, 32, 32, 512))
-_5 = np.empty((1, 64, 64, 256))
+_5 = np.empty((1, 1, 64, 64, 256))
 _6 = np.empty((1, 256, 256, 3))
 
-
-
-cis = []
-contents_imgs = []
-
-cis_append = cis.append
-contents_imgs_append = contents_imgs.append
-
-for i, path in enumerate(imagepaths):
-    contents_img = load_image(path, image_size)
-    contents_imgs_append(contents_img)
-
-    ci = get_contents_features(contents_img)
-    ci = K.eval(ci)
-    cis_append(ci)
-    sys.stdout.write("\rNow loading contents image feature: {} / {}".format(i+1 ,nb_data))
-    sys.stdout.flush()
-
-sys.stdout.write("\n")
-print("-------------------------------------")
-print("Start training.")
-
-
-ci = get_contents_features(contents_img)
-ci = K.eval(ci)
-
-def generate_arrays_from_file(contents_imgs, cis):
+def generate_arrays_from_file():
     while True:
-        for contents_img, ci in zip(contents_imgs, cis):
-            yield (contents_img, [_1, _2, _3, _4, ci, _6])
+        for path in imagepaths:
+            contents_img = load_image(path, image_size)
+            yield (contents_img, [_1, _2, _3, _4, _5, _6])
 
-model.fit_generator(generate_arrays_from_file(contents_imgs, cis),
+model.fit_generator(generate_arrays_from_file(),
                     samples_per_epoch=nb_data,
                     nb_epoch=nb_epoch)
 
 style_name = args.style_image.split("/")[-1].split(".")[0]
 
-print("Save weights")
 if not os.path.exists("./weights"):
     os.mkdir("weights")
 fsn.save_weights("./weights/{}.hdf5".format(style_name))
+print("Saved weights")
