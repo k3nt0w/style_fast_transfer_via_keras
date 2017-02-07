@@ -44,7 +44,6 @@ def mode_sub(ls):
 
 def FastStyleNet():
     # use "tf" dim-ordering
-    #inputs = Input((256,256,3))
     inputs = Input((None, None, 3))
 
     h = Convolution2D(32, 9, 9, border_mode='same')(inputs)

@@ -4,6 +4,7 @@ import numpy as np
 
 from keras.optimizers import Adam
 from keras import backend as K
+from keras.callbacks import ModelCheckpoint
 
 import argparse
 import os
@@ -11,8 +12,9 @@ import sys
 from multiprocessing import Pool, Process
 
 def gram_matrix(x):
-    # I reffered to
-    # "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
+    """I reffered to
+    "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
+    """
     x = x[0,:,:,:] # (row, col, ch)
 
     nrow, ncol, nch = K.int_shape(x)
@@ -28,23 +30,26 @@ def mean_squared_error(y_true, y_pred, ax):
     return K.mean(K.square(y_pred - y_true), axis=ax)
 
 def style_reconstruction_loss(gram_s):
-    # Since params of vgg16 are not change,
-    # so we should calculate gram_s just once.
-    # Therefore, I implemented it like this.
+    """Since params of vgg16 are not change,
+    so we should calculate gram_s just once.
+    Therefore, I implemented it like this.
+    """
     def loss_function(y_true, y_pred):
         gram_s_hat = gram_matrix(y_pred)
         return lambda_s*mean_squared_error(gram_s, gram_s_hat, ax=-1)
     return loss_function
 
 def feature_reconstruction_loss(y_true, y_pred):
-    # This function will receive a tensor that
-    # already calculated the square error.
-    # So, just calculate the average
+    """This function will receive a tensor that
+    already calculated the square error.
+    So, just calculate the average
+    """
     return lambda_f*K.mean(y_pred, axis=-1)
 
 def total_variation_loss(y_true, x):
-    # I reffered to
-    # "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
+    """I reffered to
+    "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
+    """
     assert K.ndim(x) == 4
     img_nrows = image_size
     img_ncols = image_size
@@ -62,6 +67,7 @@ parser.add_argument('--lambda_tv', default=1e-6, type=float,
 parser.add_argument('--lambda_feat', default=1.0, type=float)
 parser.add_argument('--lambda_style', default=5.0, type=float)
 parser.add_argument('--epoch', '-e', default=2, type=int)
+parser.add_argument('--callbacks', '-c', default=True, type=bool)
 parser.add_argument('--lr', '-l', default=1e-3, type=float)
 parser.add_argument('--image_size', default=256, type=int)
 
@@ -73,7 +79,8 @@ lambda_tv = args.lambda_tv
 lambda_f = args.lambda_feat
 lambda_s = args.lambda_style
 
-# "imagepaths" is a list containing absolute paths of Dataset.
+""" "imagepaths" is a list containing absolute paths of Dataset.
+"""
 fs = os.listdir(args.dataset)
 imagepaths = []
 for fn in fs:
@@ -84,10 +91,10 @@ for fn in fs:
 
 nb_data = len(imagepaths)
 
-print('num traning images:', nb_data)
-print(nb_data, 'iterations,', nb_epoch, 'epochs')
-
 model, fsn = connect_vgg16()
+
+#fsn.summary()
+#model.summary()
 
 style_img = load_image(args.style_image, args.image_size)
 contents_img = load_image(imagepaths[0], args.image_size)
@@ -104,11 +111,12 @@ model.compile(optimizer=adam,
                     feature_reconstruction_loss,
                     total_variation_loss])
 
-# Dummy arrays
-# When we use fit(X, y) function,
-# we must set same shape arrays between X and y.
-# However, we want to apply array of different shape to the objective function.
-# So, we prepare for Dummy arrays.
+"""Dummy arrays
+When we use fit(X, y) function,
+we must set same shape arrays between X and y.
+However, we want to apply array of different shape to the objective function.
+So, we prepare for Dummy arrays.
+"""
 _1 = np.empty((1, 256, 256, 64))
 _2 = np.empty((1, 128, 128, 128))
 _3 = np.empty((1, 64, 64, 256))
@@ -122,12 +130,26 @@ def generate_arrays_from_file():
             contents_img = load_image(path, image_size)
             yield (contents_img, [_1, _2, _3, _4, _5, _6])
 
-model.fit_generator(generate_arrays_from_file(),
-                    samples_per_epoch=nb_data,
-                    nb_epoch=nb_epoch)
-
 style_name = args.style_image.split("/")[-1].split(".")[0]
 
+if args.callbacks:
+    print("Save weights every epoch.")
+    if not os.path.exists("./weights"):
+        os.mkdir("weights")
+    fpath = './weights/{}.hdf5'.format(style_name)
+    cp = ModelCheckpoint(filepath=fpath, save_best_only=False, save_weights_only=True ,period=1)
+    print("Number of all data: {}, Samples per epoch (interval): {}".format(nb_data, args.interval))
+    model.fit_generator(generate_arrays_from_file(),
+                        samples_per_epoch=args.interval,
+                        nb_epoch=nb_epoch,
+                        callbacks=[cp])
+
+#else:
+print('Num traning images:', nb_data)
+print(nb_data, 'iterations,', nb_epoch, 'epochs')
+model.fit_generator(generate_arrays_from_file(),
+                    samples_per_epoch = nb_data,
+                    nb_epoch=nb_epoch)
 if not os.path.exists("./weights"):
     os.mkdir("weights")
 fsn.save_weights("./weights/{}.hdf5".format(style_name))
