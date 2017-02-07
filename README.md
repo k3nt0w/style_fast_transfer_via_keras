@@ -3,12 +3,9 @@
 Implementation of ["Perceptual Losses for Real-Time Style Transfer and Super-Resolution"](https://arxiv.org/abs/1603.08155)
  in Keras 1.2.0.
 
-I used this [chainer Implementation](https://arxiv.org/abs/1603.08155) and [Keras exmaple](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) for as a reference.  
+I used this [chainer Implementation](https://arxiv.org/abs/1603.08155) and [Keras exmaple](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) for as a reference. However, I think that the [Keras example](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) is a little confusing. That's why, I implemented it in a way very different from the example. I will explain this implementation method on [my blog](http://www.mathgram.xyz) so please refer it.
 
-However, I think that the [Keras example](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) is a little confusing. That's why, I implemented it in a way very different from the example.
-
-I will explain this implementation method on [my blog](http://www.mathgram.xyz) so please refer it.
-
+  
 I hope this implementation method will be of your help.
 
 ## Requirement

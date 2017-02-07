@@ -44,7 +44,8 @@ def mode_sub(ls):
 
 def FastStyleNet():
     # use "tf" dim-ordering
-    inputs = Input((256,256,3))
+    #inputs = Input((256,256,3))
+    inputs = Input((None, None, 3))
 
     h = Convolution2D(32, 9, 9, border_mode='same')(inputs)
     h = BatchNormalization()(h)
@@ -91,8 +92,8 @@ def connect_vgg16():
     vgg16.layers[9].name = "y3"
     vgg16.layers[13].name = "y4"
 
-    ip1 = Input((256, 256, 3), name="inputs1")
-    for_tv = fsn(ip1)
+    ip = Input((256, 256, 3), name="inputs1")
+    for_tv = fsn(ip)
 
     # I think that it can be done more easily here...
     # Please give me some idea.
@@ -110,7 +111,7 @@ def connect_vgg16():
     h  = vgg16.layers[12](h)
     y4 = vgg16.layers[13](h)
 
-    h  = vgg16.layers[1](ip1)
+    h  = vgg16.layers[1](ip)
     h  = vgg16.layers[2](h)
     h  = vgg16.layers[3](h)
     h  = vgg16.layers[4](h)
@@ -125,7 +126,7 @@ def connect_vgg16():
                 output_shape=(None, 64, 64, 1),
                 mode=lambda T: K.square(T[0][0,:,:,:]-T[1][0,:,:,:]))
 
-    model = Model(input=ip1, output=[y1, y2, y3, y4, cy3, for_tv])
+    model = Model(input=ip, output=[y1, y2, y3, y4, cy3, for_tv])
     return model, fsn
 
 if __name__ == "__main__":

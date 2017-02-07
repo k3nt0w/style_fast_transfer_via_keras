@@ -15,9 +15,9 @@ def gram_matrix(x):
     # "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
     x = x[0,:,:,:] # (row, col, ch)
 
-    #nrow, ncol, nch = K.int_shape(x)
-    array = K.eval(x)
-    nrow, ncol, nch = array.shape
+    nrow, ncol, nch = K.int_shape(x)
+    #array = K.eval(x)
+    #nrow, ncol, nch = array.shape
 
     assert K.ndim(x) == 3
     features = K.batch_flatten(K.permute_dimensions(x, (2, 0, 1)))
