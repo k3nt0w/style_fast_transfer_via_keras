@@ -18,8 +18,6 @@ def gram_matrix(x):
     x = x[0,:,:,:] # (row, col, ch)
 
     nrow, ncol, nch = K.int_shape(x)
-    #array = K.eval(x)
-    #nrow, ncol, nch = array.shape
 
     assert K.ndim(x) == 3
     features = K.batch_flatten(K.permute_dimensions(x, (2, 0, 1)))
@@ -93,9 +91,6 @@ nb_data = len(imagepaths)
 
 model, fsn = connect_vgg16()
 
-#fsn.summary()
-#model.summary()
-
 style_img = load_image(args.style_image, args.image_size)
 contents_img = load_image(imagepaths[0], args.image_size)
 
@@ -144,13 +139,13 @@ if args.callbacks:
                         nb_epoch=nb_epoch,
                         callbacks=[cp])
 
-#else:
-print('Num traning images:', nb_data)
-print(nb_data, 'iterations,', nb_epoch, 'epochs')
-model.fit_generator(generate_arrays_from_file(),
-                    samples_per_epoch = nb_data,
-                    nb_epoch=nb_epoch)
-if not os.path.exists("./weights"):
-    os.mkdir("weights")
-fsn.save_weights("./weights/{}.hdf5".format(style_name))
-print("Saved weights")
+else:
+    print('Num traning images:', nb_data)
+    print(nb_data, 'iterations,', nb_epoch, 'epochs')
+    model.fit_generator(generate_arrays_from_file(),
+                        samples_per_epoch = nb_data,
+                        nb_epoch=nb_epoch)
+    if not os.path.exists("./weights"):
+        os.mkdir("weights")
+    fsn.save_weights("./weights/{}.hdf5".format(style_name))
+    print("Saved weights")

@@ -12,7 +12,6 @@ parser = argparse.ArgumentParser(description='style fast transfer: image generat
 parser.add_argument('input')
 parser.add_argument('--weight', '-w', default='models/style.model', type=str)
 parser.add_argument('--out', '-o', default='out.jpg', type=str)
-parser.add_argument('--padding', default=50, type=int)
 parser.add_argument('--keep_colors', action='store_true')
 parser.set_defaults(keep_colors=False)
 args = parser.parse_args()
@@ -38,10 +37,8 @@ image = image.reshape((1,) + image.shape)
 #result = fsn.predict(image)[0]
 result = image
 result = np.uint8(result[0])
-med = Image.fromarray(result)
-#if args.median_filter > 0:
-#	med = med.filter(ImageFilter.MedianFilter(args.median_filter))
+out = Image.fromarray(result)
 if args.keep_colors:
-    med = original_colors(original, med)
+    med = original_colors(original, out)
 print(time.time() - start, 'sec')
-med.save(args.out)
+out.save(args.out)
