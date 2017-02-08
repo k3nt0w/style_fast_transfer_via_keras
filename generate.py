@@ -11,7 +11,7 @@ https://github.com/yusuketomoto/chainer-fast-neuralstyle/blob/master/generate.py
 parser = argparse.ArgumentParser(description='style fast transfer: image generator via Keras')
 parser.add_argument('input')
 parser.add_argument('--weight', '-w', default='models/style.model', type=str)
-parser.add_argument('--out', '-o', default='out.jpg', type=str)
+parser.add_argument('--out', '-o', default='./sample_imgs/out.jpg', type=str)
 parser.add_argument('--keep_colors', action='store_true')
 parser.set_defaults(keep_colors=False)
 args = parser.parse_args()
@@ -26,16 +26,16 @@ def original_colors(original, stylized):
 
 fsn = FastStyleNet()
 fsn.load_weights(args.weight)
+
 print("Load weights.")
 
 print("Now transforming...")
 start = time.time()
 original = Image.open(args.input).convert('RGB')
 image = np.asarray(original, dtype=np.float32)
-
 image = image.reshape((1,) + image.shape)
-#result = fsn.predict(image)[0]
-result = image
+result = fsn.predict(image)
+
 result = np.uint8(result[0])
 out = Image.fromarray(result)
 if args.keep_colors:

@@ -11,6 +11,29 @@ import os
 import sys
 from multiprocessing import Pool, Process
 
+
+parser = argparse.ArgumentParser(description='Real-time style transfer via Keras')
+parser.add_argument('--dataset', '-d', default='dataset', type=str,
+                    help='dataset directory path (according to the paper, use MSCOCO 80k images)')
+parser.add_argument('--style_image', '-s', type=str, required=True,
+                    help='style image path')
+parser.add_argument('--weight', '-w', default="", type=str)
+parser.add_argument('--lambda_tv', default=1e-6, type=float,
+                    help='weight of total variation regularization according to the paper to be set between 10e-4 and 10e-6.')
+parser.add_argument('--lambda_feat', default=1.0, type=float)
+parser.add_argument('--lambda_style', default=5.0, type=float)
+parser.add_argument('--epoch', '-e', default=2, type=int)
+parser.add_argument('--lr', '-l', default=1e-3, type=float)
+parser.add_argument('--image_size', default=256, type=int)
+
+args = parser.parse_args()
+
+image_size = args.image_size
+nb_epoch = args.epoch
+lambda_tv = args.lambda_tv
+lambda_f = args.lambda_feat
+lambda_s = args.lambda_style
+
 def gram_matrix(x):
     """I reffered to
     "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
@@ -24,17 +47,13 @@ def gram_matrix(x):
     gram = K.dot(features, K.transpose(features)) / (nrow * ncol * nch)
     return gram
 
-def mean_squared_error(y_true, y_pred, ax):
-    return K.mean(K.square(y_pred - y_true), axis=ax)
-
 def style_reconstruction_loss(gram_s):
-    """Since params of vgg16 are not change,
-    so we should calculate gram_s just once.
-    Therefore, I implemented it like this.
+    """we should calculate gram matrix of style image just once.
+    Therefore, I implemented this function like this.
     """
     def loss_function(y_true, y_pred):
         gram_s_hat = gram_matrix(y_pred)
-        return lambda_s*mean_squared_error(gram_s, gram_s_hat, ax=-1)
+        return lambda_s * K.mean(K.square(gram_s_hat - gram_s))
     return loss_function
 
 def feature_reconstruction_loss(y_true, y_pred):
@@ -42,7 +61,7 @@ def feature_reconstruction_loss(y_true, y_pred):
     already calculated the square error.
     So, just calculate the average
     """
-    return lambda_f*K.mean(y_pred, axis=-1)
+    return lambda_f * K.mean(y_pred)
 
 def total_variation_loss(y_true, x):
     """I reffered to
@@ -53,29 +72,9 @@ def total_variation_loss(y_true, x):
     img_ncols = image_size
     a = K.square(x[:, :img_nrows - 1, :img_ncols - 1, :] - x[:, 1:, :img_ncols - 1, :])
     b = K.square(x[:, :img_nrows - 1, :img_ncols - 1, :] - x[:, :img_nrows - 1, 1:, :])
-    return lambda_tv*K.sum(K.pow(a + b, 1.25))
+    return lambda_tv*K.mean(K.pow(a + b, 1.25))
 
-parser = argparse.ArgumentParser(description='Real-time style transfer via Keras')
-parser.add_argument('--dataset', '-d', default='dataset', type=str,
-                    help='dataset directory path (according to the paper, use MSCOCO 80k images)')
-parser.add_argument('--style_image', '-s', type=str, required=True,
-                    help='style image path')
-parser.add_argument('--lambda_tv', default=1e-6, type=float,
-                    help='weight of total variation regularization according to the paper to be set between 10e-4 and 10e-6.')
-parser.add_argument('--lambda_feat', default=1.0, type=float)
-parser.add_argument('--lambda_style', default=5.0, type=float)
-parser.add_argument('--epoch', '-e', default=2, type=int)
-parser.add_argument('--callbacks', '-c', default=True, type=bool)
-parser.add_argument('--lr', '-l', default=1e-3, type=float)
-parser.add_argument('--image_size', default=256, type=int)
-
-args = parser.parse_args()
-
-image_size = args.image_size
-nb_epoch = args.epoch
-lambda_tv = args.lambda_tv
-lambda_f = args.lambda_feat
-lambda_s = args.lambda_style
+# ---------------- train --------------------
 
 """ "imagepaths" is a list containing absolute paths of Dataset.
 """
@@ -90,7 +89,8 @@ for fn in fs:
 nb_data = len(imagepaths)
 
 model, fsn = connect_vgg16()
-
+if len(args.weight) > 0:
+    fsn.load_weights(args.weight)
 style_img = load_image(args.style_image, args.image_size)
 contents_img = load_image(imagepaths[0], args.image_size)
 
@@ -127,25 +127,12 @@ def generate_arrays_from_file():
 
 style_name = args.style_image.split("/")[-1].split(".")[0]
 
-if args.callbacks:
-    print("Save weights every epoch.")
-    if not os.path.exists("./weights"):
-        os.mkdir("weights")
-    fpath = './weights/{}.hdf5'.format(style_name)
-    cp = ModelCheckpoint(filepath=fpath, save_best_only=False, save_weights_only=True ,period=1)
-    print("Number of all data: {}, Samples per epoch (interval): {}".format(nb_data, args.interval))
-    model.fit_generator(generate_arrays_from_file(),
-                        samples_per_epoch=args.interval,
-                        nb_epoch=nb_epoch,
-                        callbacks=[cp])
-
-else:
-    print('Num traning images:', nb_data)
-    print(nb_data, 'iterations,', nb_epoch, 'epochs')
-    model.fit_generator(generate_arrays_from_file(),
-                        samples_per_epoch = nb_data,
-                        nb_epoch=nb_epoch)
-    if not os.path.exists("./weights"):
-        os.mkdir("weights")
-    fsn.save_weights("./weights/{}.hdf5".format(style_name))
-    print("Saved weights")
+print('Num traning images:', nb_data)
+print(nb_data, 'iterations,', nb_epoch, 'epochs')
+model.fit_generator(generate_arrays_from_file(),
+                    samples_per_epoch=nb_data,
+                    nb_epoch=nb_epoch)
+if not os.path.exists("./weights"):
+    os.mkdir("weights")
+fsn.save_weights("./weights/{}.hdf5".format(style_name))
+print("Saved weights")
