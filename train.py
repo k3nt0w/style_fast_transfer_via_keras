@@ -85,9 +85,9 @@ for fn in fs:
         imagepath = os.path.join(args.dataset,fn)
         imagepaths.append(imagepath)
 
-nb_data = len(imagepaths)
 if args.bound:
     imagepaths = imagepaths[:args.bound]
+nb_data = len(imagepaths)
 
 model, fsn = connect_vgg16(image_size)
 if len(args.weight) > 0:
