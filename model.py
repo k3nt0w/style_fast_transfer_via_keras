@@ -39,8 +39,6 @@ class ResidualBlock(Layer):
         cols = input_shape[2]
         return (input_shape[0], rows, cols, self.nb_filter)
 
-def mode_sub(ls):
-    return ls[0] - ls[1]
 
 def FastStyleNet():
     # use "tf" dim-ordering
@@ -76,7 +74,7 @@ def FastStyleNet():
 
     return Model(inputs, out)
 
-def connect_vgg16():
+def connect_vgg16(size):
     # We need connect FastStyleNet and vgg16
     # to train FastStyleNet.
     fsn = FastStyleNet()
@@ -91,7 +89,7 @@ def connect_vgg16():
     vgg16.layers[9].name = "y3"
     vgg16.layers[13].name = "y4"
 
-    ip = Input((256, 256, 3), name="inputs1")
+    ip = Input((size, size, 3), name="input")
     for_tv = fsn(ip)
 
     # I think that it can be done more easily here...
@@ -131,4 +129,5 @@ def connect_vgg16():
 if __name__ == "__main__":
     from keras.utils.visualize_util import plot
     model, _ = connect_vgg16()
+    model.summary()
     plot(model, "train_model.png")

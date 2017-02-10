@@ -21,8 +21,6 @@ def load_image(path, size):
     return image[np.newaxis, :]
 
 def get_style_features(style_img):
-    if style_img.shape != (1,256,256,3):
-        raise ValueError('Invalid image shape for get_features_of_style:', img)
     inputs  = K.variable(style_img)
     h  = vgg16.layers[ 0](inputs)
     h  = vgg16.layers[ 1](h)

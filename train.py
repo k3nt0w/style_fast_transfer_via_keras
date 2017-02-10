@@ -9,8 +9,6 @@ from keras.callbacks import ModelCheckpoint
 import argparse
 import os
 import sys
-from multiprocessing import Pool, Process
-
 
 parser = argparse.ArgumentParser(description='Real-time style transfer via Keras')
 parser.add_argument('--dataset', '-d', default='dataset', type=str,
@@ -21,10 +19,11 @@ parser.add_argument('--weight', '-w', default="", type=str)
 parser.add_argument('--lambda_tv', default=1e-6, type=float,
                     help='weight of total variation regularization according to the paper to be set between 10e-4 and 10e-6.')
 parser.add_argument('--lambda_feat', default=1.0, type=float)
-parser.add_argument('--lambda_style', default=5.0, type=float)
+parser.add_argument('--lambda_style', default=1.0, type=float)
 parser.add_argument('--epoch', '-e', default=2, type=int)
 parser.add_argument('--lr', '-l', default=1e-3, type=float)
 parser.add_argument('--image_size', default=256, type=int)
+parser.add_argument('--bound', '-b', default=0, type=int)
 
 args = parser.parse_args()
 
@@ -59,7 +58,7 @@ def style_reconstruction_loss(gram_s):
 def feature_reconstruction_loss(y_true, y_pred):
     """This function will receive a tensor that
     already calculated the square error.
-    So, just calculate the average
+    So, just calculate the average here.
     """
     return lambda_f * K.mean(y_pred)
 
@@ -87,8 +86,10 @@ for fn in fs:
         imagepaths.append(imagepath)
 
 nb_data = len(imagepaths)
+if not arg.bound:
+    imagepaths = imagepaths[:arg.bound]
 
-model, fsn = connect_vgg16()
+model, fsn = connect_vgg16(image_size)
 if len(args.weight) > 0:
     fsn.load_weights(args.weight)
 style_img = load_image(args.style_image, args.image_size)
