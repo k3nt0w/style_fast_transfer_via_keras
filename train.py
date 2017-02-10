@@ -92,10 +92,18 @@ nb_data = len(imagepaths)
 model, fsn = connect_vgg16(image_size)
 if len(args.weight) > 0:
     fsn.load_weights(args.weight)
-style_img = load_image(args.style_image, args.image_size)
+
+def preprocess(image):
+    mean = np.asarray(120, dtype=np.float32)
+    return image - mean
+
+style = preprocess(np.asarray(Image.open(args.style_image).convert('RGB').resize((image_size,image_size)), dtype=np.float32))
+style = np.asarray(style, dtype=np.float32)
+style_b = np.zeros((1,) + style.shape, dtype=np.float32)
+
 contents_img = load_image(imagepaths[0], args.image_size)
 
-style_features = get_style_features(style_img)
+style_features = get_style_features(style_b)
 y1, y2, y3, y4 = [gram_matrix(y) for y in style_features]
 
 adam = Adam(lr=args.lr)

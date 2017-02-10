@@ -13,6 +13,32 @@ from keras.applications.vgg16 import VGG16
 
 vgg16 = VGG16(include_top=False, weights='imagenet', input_tensor=None, input_shape=(256,256,3))
 
+'''Referred to "https://github.com/titu1994/Fast-Neural-Style/blob/master/layers.py"
+'''
+class Denormalize(Layer):
+    '''
+    Custom layer to denormalize the final Convolution layer activations (tanh)
+    Since tanh scales the output to the range (-1, 1), we add 1 to bring it to the
+    range (0, 2). We then multiply it by 127.5 to scale the values to the range (0, 255)
+    '''
+
+    def __init__(self, **kwargs):
+        super(Denormalize, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        pass
+
+    def call(self, x, mask=None):
+        '''
+        Scales the tanh output activations from previous layer (-1, 1) to the
+        range (0, 255)
+        '''
+
+        return (x + 1) * 127.5
+
+    def get_output_shape_for(self, input_shape):
+        return input_shape
+
 def residual_block(x, nb_filter, ksize):
     h = Convolution2D(nb_filter, ksize, ksize, subsample=(1, 1), border_mode='same')(x)
     h = BatchNormalization()(h)
@@ -60,7 +86,8 @@ def FastStyleNet():
     h = BatchNormalization()(h)
     h = ELU()(h)
 
-    out = Convolution2D( 3, 9, 9, border_mode='same')(h)
+    h = Convolution2D( 3, 9, 9, activation="tanh", border_mode='same')(h)
+    out = Denormalize()(h)
 
     return Model(inputs, out)
 
