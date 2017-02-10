@@ -2,7 +2,7 @@ from keras.models import Model
 from keras.layers import Input, merge
 from keras.layers.core import Activation
 from keras.layers.advanced_activations import ELU
-from keras.layers.convolutional import Convolution2D, UpSampling2D, ZeroPadding2D
+from keras.layers.convolutional import Convolution2D, UpSampling2D, ZeroPadding2D, AveragePooling2D
 from keras.layers.normalization import BatchNormalization
 
 from keras import backend as K
@@ -13,31 +13,22 @@ from keras.applications.vgg16 import VGG16
 
 vgg16 = VGG16(include_top=False, weights='imagenet', input_tensor=None, input_shape=(256,256,3))
 
-class ResidualBlock(Layer):
-    def __init__(self, nb_filter, nb_row, nb_col, subsample=(1,1), **kwargs):
-        self.nb_filter = nb_filter
-        self.nb_row = nb_row
-        self.nb_col = nb_col
-        self.subsample = subsample
-        super(ResidualBlock, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        # This layer is just stacking layers,
-        # so we do not need about "weight" implementation.
-        pass
-
-    def call(self, x, mask=None):
-        h = Convolution2D(self.nb_filter, self.nb_row, self.nb_col, subsample=self.subsample, border_mode='same')(x)
-        h = BatchNormalization()(h)
-        h = Activation("relu")(h)
-        h = Convolution2D(self.nb_filter, self.nb_row, self.nb_col, subsample=(1, 1), border_mode='same')(h)
-        h = BatchNormalization()(h)
-        return h + x
-
-    def get_output_shape_for(self, input_shape):
-        rows = input_shape[1]
-        cols = input_shape[2]
-        return (input_shape[0], rows, cols, self.nb_filter)
+def residual_block(x, nb_filter, ksize):
+    h = Convolution2D(nb_filter, ksize, ksize, subsample=(1, 1), border_mode='same')(x)
+    h = BatchNormalization()(h)
+    h = Activation("relu")(h)
+    h = Convolution2D(nb_filter, ksize, ksize, subsample=(1, 1), border_mode='same')(h)
+    h = BatchNormalization()(h)
+    if K.int_shape(x) != K.int_shape(h):
+        n, c, hh, ww = K.int_shape(x)
+        pad_c = K.int_shape(h)[1] - c
+        p = K.zeros((n, pad_c, hh, ww), dtype=xp.float32)
+        p = K.variable(p)
+        x = K.concatenate([p, x], axis=1) #channel
+        if K.int_shape(x)[2:] != K.int_shape(h)[2:]:
+            x = AveragePooling2D(pool_size=(2, 2), strides=1)(x)
+    m = merge([h, x])
+    return m
 
 
 def FastStyleNet():
@@ -56,11 +47,11 @@ def FastStyleNet():
     h = BatchNormalization()(h)
     h = ELU()(h)
 
-    h = ResidualBlock(128, 3, 3)(h)
-    h = ResidualBlock(128, 3, 3)(h)
-    h = ResidualBlock(128, 3, 3)(h)
-    h = ResidualBlock(128, 3, 3)(h)
-    h = ResidualBlock(128, 3, 3)(h)
+    h = residual_block(h, 128, 3)
+    h = residual_block(h, 128, 3)
+    h = residual_block(h, 128, 3)
+    h = residual_block(h, 128, 3)
+    h = residual_block(h, 128, 3)
 
     h = Convolution2D(64, 3, 3, border_mode='same')(h)
     h = BatchNormalization()(h)

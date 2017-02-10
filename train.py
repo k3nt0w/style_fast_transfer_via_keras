@@ -19,7 +19,7 @@ parser.add_argument('--weight', '-w', default="", type=str)
 parser.add_argument('--lambda_tv', default=1e-6, type=float,
                     help='weight of total variation regularization according to the paper to be set between 10e-4 and 10e-6.')
 parser.add_argument('--lambda_feat', default=1.0, type=float)
-parser.add_argument('--lambda_style', default=1.0, type=float)
+parser.add_argument('--lambda_style', default=5.0, type=float)
 parser.add_argument('--epoch', '-e', default=2, type=int)
 parser.add_argument('--lr', '-l', default=1e-3, type=float)
 parser.add_argument('--image_size', default=256, type=int)
@@ -86,8 +86,8 @@ for fn in fs:
         imagepaths.append(imagepath)
 
 nb_data = len(imagepaths)
-if not arg.bound:
-    imagepaths = imagepaths[:arg.bound]
+if args.bound:
+    imagepaths = imagepaths[:args.bound]
 
 model, fsn = connect_vgg16(image_size)
 if len(args.weight) > 0:
