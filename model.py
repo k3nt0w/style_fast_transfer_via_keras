@@ -27,7 +27,7 @@ def residual_block(x, nb_filter, ksize):
         x = K.concatenate([p, x], axis=1) #channel
         if K.int_shape(x)[2:] != K.int_shape(h)[2:]:
             x = AveragePooling2D(pool_size=(2, 2), strides=1)(x)
-    m = merge([h, x])
+    m = merge([h, x], mode='sum')
     return m
 
 
