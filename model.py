@@ -30,7 +30,6 @@ def residual_block(x, nb_filter, ksize):
     m = merge([h, x], mode='sum')
     return m
 
-
 def FastStyleNet():
     # use "tf" dim-ordering
     inputs = Input((None, None, 3))
