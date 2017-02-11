@@ -24,17 +24,21 @@ def original_colors(original, stylized):
     hs, ss, vs = stylized.convert('HSV').split()
     return Image.merge('HSV', (h, s, vs)).convert('RGB')
 
-fsn = FastStyleNet()
-fsn.load_weights(args.weight)
+original = Image.open(args.input).convert('RGB')
+image = np.asarray(original, dtype=np.float32)
+
+row, col = image.shape[:2]
+
+fsn = FastStyleNet(img_height=row, img_width=col)
+fsn_model = fsn.create_model()
+fsn_model.load_weights(args.weight)
 
 print("Load weights.")
 
 print("Now transforming...")
 start = time.time()
-original = Image.open(args.input).convert('RGB')
-image = np.asarray(original, dtype=np.float32)
 image = image.reshape((1,) + image.shape)
-result = fsn.predict(image)
+result = fsn_model.predict(image)
 
 result = np.uint8(result[0])
 out = Image.fromarray(result)

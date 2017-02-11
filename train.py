@@ -21,9 +21,10 @@ parser.add_argument('--lambda_tv', default=1e-6, type=float,
 parser.add_argument('--lambda_feat', default=1.0, type=float)
 parser.add_argument('--lambda_style', default=5.0, type=float)
 parser.add_argument('--epoch', '-e', default=2, type=int)
+parser.add_argument('--batchsize', '-b', default=1, type=int)
 parser.add_argument('--lr', '-l', default=1e-3, type=float)
 parser.add_argument('--image_size', default=256, type=int)
-parser.add_argument('--bound', '-b', default=0, type=int)
+parser.add_argument('--bound', '-bo', default=0, type=int)
 
 args = parser.parse_args()
 
@@ -89,7 +90,9 @@ if args.bound:
     imagepaths = imagepaths[:args.bound]
 nb_data = len(imagepaths)
 
-model, fsn = connect_vgg16(image_size)
+fsn = FastStyleNet()
+model, fsn_model = fsn.connect_vgg16()
+
 if len(args.weight) > 0:
     fsn.load_weights(args.weight)
 
@@ -125,7 +128,7 @@ _1 = np.empty((1, 256, 256, 64))
 _2 = np.empty((1, 128, 128, 128))
 _3 = np.empty((1, 64, 64, 256))
 _4 = np.empty((1, 32, 32, 512))
-_5 = np.empty((1, 1, 64, 64, 256))
+_5 = np.empty((1, 64, 64, 256))
 _6 = np.empty((1, 256, 256, 3))
 
 def generate_arrays_from_file():
@@ -143,5 +146,5 @@ model.fit_generator(generate_arrays_from_file(),
                     nb_epoch=nb_epoch)
 if not os.path.exists("./weights"):
     os.mkdir("weights")
-fsn.save_weights("./weights/{}.hdf5".format(style_name))
+fsn_model.save_weights("./weights/{}.hdf5".format(style_name))
 print("Saved weights")
