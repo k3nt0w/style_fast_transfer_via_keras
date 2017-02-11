@@ -7,9 +7,10 @@ from keras.layers.normalization import BatchNormalization
 
 from keras import backend as K
 from keras.engine.topology import Layer
-import numpy as np
-
 from keras.applications.vgg16 import VGG16
+
+import numpy as np
+from copy import deepcopy
 
 vgg16 = VGG16(include_top=False, weights='imagenet', input_tensor=None, input_shape=(256,256,3))
 
@@ -35,6 +36,19 @@ class Denormalize(Layer):
         '''
 
         return (x + 1) * 127.5
+
+    def get_output_shape_for(self, input_shape):
+        return input_shape
+
+class SubMean(Layer):
+    def __init__(self, **kwargs):
+        super(SubMean, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        pass
+
+    def call(self, x, mask=None):
+        return x - 120
 
     def get_output_shape_for(self, input_shape):
         return input_shape
@@ -115,17 +129,21 @@ class FastStyleNet:
         for l in vgg16.layers:
             l.trainable = False
 
-        vgg16.layers[2].name = "y1"
-        vgg16.layers[5].name = "y2"
-        vgg16.layers[9].name = "y3"
+        vgg16.layers[ 2].name = "y1"
+        vgg16.layers[ 5].name = "y2"
+        vgg16.layers[ 9].name = "y3"
         vgg16.layers[13].name = "y4"
 
         ip = Input((self.img_height, self.img_width, 3), name="input")
-        for_tv = fsn(ip)
+
+        y0 = fsn(ip)
+
+        ip2 = SubMean()(ip)
+        cy0 = SubMean()(y0)
 
         # I think that it can be done more easily here...
         # Please give me some idea.
-        h  = vgg16.layers[1](for_tv)
+        h  = vgg16.layers[1](cy0)
         y1 = vgg16.layers[2](h)
         h  = vgg16.layers[3](y1)
         h  = vgg16.layers[4](h)
@@ -139,22 +157,22 @@ class FastStyleNet:
         h  = vgg16.layers[12](h)
         y4 = vgg16.layers[13](h)
 
-        h  = vgg16.layers[1](ip)
-        h  = vgg16.layers[2](h)
-        h  = vgg16.layers[3](h)
-        h  = vgg16.layers[4](h)
-        h  = vgg16.layers[5](h)
-        h  = vgg16.layers[6](h)
-        h  = vgg16.layers[7](h)
-        h  = vgg16.layers[8](h)
-        cy3 = vgg16.layers[9](h)
+        h2 = vgg16.layers[1](ip2)
+        h2 = vgg16.layers[2](h2)
+        h2 = vgg16.layers[3](h2)
+        h2 = vgg16.layers[4](h2)
+        h2 = vgg16.layers[5](h2)
+        h2 = vgg16.layers[6](h2)
+        h2 = vgg16.layers[7](h2)
+        h2 = vgg16.layers[8](h2)
+        cy3 = vgg16.layers[9](h2)
 
         # Calculating the square error in this layer has no problem.
         cy3 = merge(inputs=[cy3, y3],
-                    output_shape=(64, 64, 1),
+                    output_shape=(64, 64, 256),
                     mode=lambda T: K.square(T[0]-T[1]))
 
-        train_model = Model(input=ip, output=[y1, y2, y3, y4, cy3, for_tv])
+        train_model = Model(input=ip, output=[y1, y2, y3, y4, cy3, y0])
         return train_model, fsn
 
 if __name__ == "__main__":
