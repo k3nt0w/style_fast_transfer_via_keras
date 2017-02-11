@@ -3,16 +3,17 @@
 Implementation of ["Perceptual Losses for Real-Time Style Transfer and Super-Resolution"](https://arxiv.org/abs/1603.08155)
  in Keras 1.2.0.
 
-I used this [chainer Implementation](https://arxiv.org/abs/1603.08155) and [Keras exmaple](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) for as a reference. However, I think that the [Keras example](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) is a little confusing. That's why, I implemented it in a way very different from the example. I will explain this implementation method on [my blog](http://www.mathgram.xyz) so please refer it.
-
+I used this [chainer Implementation](https://arxiv.org/abs/1603.08155) and [Keras exmaple](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) for as a reference.
   
+I think that the [Keras example](https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py) is a little confusing. That's why, I implemented it in a way very different from the example. I will explain this implementation method on [my blog](http://www.mathgram.xyz) so please refer it.
+
+
 I hope this implementation method will be of your help.
 
 ## Requirement
 + Keras v1.2.0
-```
-$ pip install keras
-```
++ TensorFlow v0.9.0 as backend
+
 ! caution : I always use tensorflow as backend. So, if you use theano, the program won't work. Then, please change the backend.
 
 ## Usage
@@ -29,7 +30,7 @@ $ python generate.py -i <path/to/contents image> -w <path/to/weights of style>
 ```
 example
 ```
-$ python generate.py -i <path/to/contents image> -w <path/to/weights of style>
+$ python generate.py -i sample_imgs/tubingen.jpg -w weights/style_1.hdf5
 ```
 
 ## Example
