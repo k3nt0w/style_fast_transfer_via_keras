@@ -4,6 +4,7 @@ from keras import backend as K
 import numpy as np
 from PIL import Image
 import os
+from keras.applications.vgg16 import VGG16
 
 def load_image(path, size):
     image = Image.open(path).convert('RGB')
@@ -21,11 +22,11 @@ def load_image(path, size):
     return image[np.newaxis, :]
 
 def get_style_features(style_img):
-    inputs  = K.variable(style_img)
-    h  = vgg16.layers[ 0](inputs)
-    h  = vgg16.layers[ 1](h)
+
+    inputs = K.variable(style_img)
+    h  = vgg16.layers[ 1](inputs)
     y1 = vgg16.layers[ 2](h)
-    h  = vgg16.layers[ 3](y1)
+    h  = vgg16.layers[ 3](h)
     h  = vgg16.layers[ 4](h)
     y2 = vgg16.layers[ 5](h)
     h  = vgg16.layers[ 6](y2)
@@ -36,18 +37,5 @@ def get_style_features(style_img):
     h  = vgg16.layers[11](h)
     h  = vgg16.layers[12](h)
     y4 = vgg16.layers[13](h)
-    return [y1, y2, y3, y4]
 
-def get_contents_features(contents_img):
-    inputs  = K.variable(contents_img)
-    h  = vgg16.layers[ 0](inputs)
-    h  = vgg16.layers[ 1](h)
-    h  = vgg16.layers[ 2](h)
-    h  = vgg16.layers[ 3](h)
-    h  = vgg16.layers[ 4](h)
-    h  = vgg16.layers[ 5](h)
-    h  = vgg16.layers[ 6](h)
-    h  = vgg16.layers[ 7](h)
-    h  = vgg16.layers[ 8](h)
-    y3 = vgg16.layers[ 9](h)
-    return y3
+    return [y1, y2, y3, y4]

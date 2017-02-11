@@ -12,7 +12,10 @@ from keras.applications.vgg16 import VGG16
 import numpy as np
 from copy import deepcopy
 
-vgg16 = VGG16(include_top=False, weights='imagenet', input_tensor=None, input_shape=(256,256,3))
+vgg16 = VGG16(include_top=False,
+              weights='imagenet',
+              input_tensor=None,
+              input_shape=(256,256,3))
 
 '''Referred to "https://github.com/titu1994/Fast-Neural-Style/blob/master/layers.py"
 '''
@@ -120,10 +123,6 @@ class FastStyleNet:
         return Model(inputs, out)
 
     def connect_vgg16(self):
-        # We need connect FastStyleNet and vgg16
-        # to train FastStyleNet.
-        fsn = self.create_model()
-        fsn.name = "FastStyleNet"
 
         # Frozen all layers of vgg16.
         for l in vgg16.layers:
@@ -133,6 +132,11 @@ class FastStyleNet:
         vgg16.layers[ 5].name = "y2"
         vgg16.layers[ 9].name = "y3"
         vgg16.layers[13].name = "y4"
+
+        # We need connect FastStyleNet and vgg16
+        # to train FastStyleNet.
+        fsn = self.create_model()
+        fsn.name = "FastStyleNet"
 
         ip = Input((self.img_height, self.img_width, 3), name="input")
 

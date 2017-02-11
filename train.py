@@ -48,7 +48,7 @@ def gram_matrix(x):
     return gram
 
 def style_reconstruction_loss(gram_s):
-    """we should calculate gram matrix of style image just once.
+    """We should calculate gram matrix of style image just once.
     Therefore, I implemented this function like this.
     """
     def loss_function(y_true, y_pred):
@@ -90,24 +90,20 @@ if args.bound:
     imagepaths = imagepaths[:args.bound]
 nb_data = len(imagepaths)
 
-fsn = FastStyleNet()
-model, fsn_model = fsn.connect_vgg16()
-
-if len(args.weight) > 0:
-    fsn.load_weights(args.weight)
-
 def preprocess(image):
     mean = np.asarray(120, dtype=np.float32)
     return image - mean
 
 style = preprocess(np.asarray(Image.open(args.style_image).convert('RGB').resize((image_size,image_size)), dtype=np.float32))
-style = np.asarray(style, dtype=np.float32)
-style_b = np.zeros((1,) + style.shape, dtype=np.float32)
-
-contents_img = load_image(imagepaths[0], args.image_size)
-
-style_features = get_style_features(style_b)
+style = style.reshape((1,) + style.shape)
+style_features = get_style_features(style)
 y1, y2, y3, y4 = [gram_matrix(y) for y in style_features]
+
+fsn = FastStyleNet()
+model, fsn_model = fsn.connect_vgg16()
+
+if len(args.weight) > 0:
+    fsn.load_weights(args.weight)
 
 adam = Adam(lr=args.lr)
 model.compile(optimizer=adam,
