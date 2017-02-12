@@ -39,3 +39,11 @@ def get_style_features(style_img):
     y4 = vgg16.layers[13](h)
 
     return [y1, y2, y3, y4]
+
+def preprocess_input(x):
+    x[:, :, :, 0] -= 103.939
+    x[:, :, :, 1] -= 116.779
+    x[:, :, :, 2] -= 123.68
+    # 'RGB'->'BGR'
+    x = x[:, :, :, ::-1]
+    return x

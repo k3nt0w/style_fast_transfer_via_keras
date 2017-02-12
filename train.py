@@ -34,6 +34,7 @@ lambda_tv = args.lambda_tv
 lambda_f = args.lambda_feat
 lambda_s = args.lambda_style
 
+# ----- loss functions -----
 def gram_matrix(x):
     """I reffered to
     "https://github.com/fchollet/keras/blob/master/examples/neural_style_transfer.py"
@@ -53,7 +54,8 @@ def style_reconstruction_loss(gram_s):
     """
     def loss_function(y_true, y_pred):
         gram_s_hat = gram_matrix(y_pred)
-        return lambda_s * K.mean(K.square(gram_s_hat - gram_s))
+        #return lambda_s * K.mean(K.square(gram_s_hat - gram_s))
+        return K.sum(gram_s)
     return loss_function
 
 def feature_reconstruction_loss(y_true, y_pred):
@@ -90,12 +92,10 @@ if args.bound:
     imagepaths = imagepaths[:args.bound]
 nb_data = len(imagepaths)
 
-def preprocess(image):
-    mean = np.asarray(120, dtype=np.float32)
-    return image - mean
 
-style = preprocess(np.asarray(Image.open(args.style_image).convert('RGB').resize((image_size,image_size)), dtype=np.float32))
+style = np.asarray(Image.open(args.style_image).convert('RGB').resize((image_size,image_size)), dtype=np.float32)
 style = style.reshape((1,) + style.shape)
+style = preprocess_input(style)
 style_features = get_style_features(style)
 y1, y2, y3, y4 = [gram_matrix(y) for y in style_features]
 

@@ -6,8 +6,9 @@ from keras.layers.convolutional import Convolution2D, ZeroPadding2D, Deconvoluti
 from keras.layers.normalization import BatchNormalization
 
 from keras import backend as K
-from keras.engine.topology import Layer
 from keras.applications.vgg16 import VGG16
+
+from layers import *
 
 import numpy as np
 from copy import deepcopy
@@ -16,45 +17,6 @@ vgg16 = VGG16(include_top=False,
               weights='imagenet',
               input_tensor=None,
               input_shape=(256,256,3))
-
-'''Referred to "https://github.com/titu1994/Fast-Neural-Style/blob/master/layers.py"
-'''
-class Denormalize(Layer):
-    '''
-    Custom layer to denormalize the final Convolution layer activations (tanh)
-    Since tanh scales the output to the range (-1, 1), we add 1 to bring it to the
-    range (0, 2). We then multiply it by 127.5 to scale the values to the range (0, 255)
-    '''
-
-    def __init__(self, **kwargs):
-        super(Denormalize, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        pass
-
-    def call(self, x, mask=None):
-        '''
-        Scales the tanh output activations from previous layer (-1, 1) to the
-        range (0, 255)
-        '''
-
-        return (x + 1) * 127.5
-
-    def get_output_shape_for(self, input_shape):
-        return input_shape
-
-class SubMean(Layer):
-    def __init__(self, **kwargs):
-        super(SubMean, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        pass
-
-    def call(self, x, mask=None):
-        return x - 120
-
-    def get_output_shape_for(self, input_shape):
-        return input_shape
 
 class FastStyleNet:
 
@@ -141,6 +103,9 @@ class FastStyleNet:
         ip = Input((self.img_height, self.img_width, 3), name="input")
 
         y0 = fsn(ip)
+
+        #ip2 = VGGNormalize()(ip)
+        #cy0 = VGGNormalize()(y0)
 
         ip2 = SubMean()(ip)
         cy0 = SubMean()(y0)
