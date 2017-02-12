@@ -16,7 +16,6 @@ parser.add_argument('--keep_colors', action='store_true')
 parser.set_defaults(keep_colors=False)
 args = parser.parse_args()
 
-
 """from 6o6o's fork. https://github.com/6o6o/chainer-fast-neuralstyle/blob/master/generate.py
 """
 def original_colors(original, stylized):

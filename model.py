@@ -2,21 +2,17 @@ from keras.models import Model
 from keras.layers import Input, merge
 from keras.layers.core import Activation
 from keras.layers.advanced_activations import ELU
-from keras.layers.convolutional import Convolution2D, ZeroPadding2D, Deconvolution2D, AveragePooling2D
+from keras.layers.convolutional import Convolution2D, ZeroPadding2D, Deconvolution2D, AveragePooling2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
-
 from keras import backend as K
-from keras.applications.vgg16 import VGG16
+from keras.utils.data_utils import get_file
 
 from layers import *
 
+import h5py
 import numpy as np
-from copy import deepcopy
 
-vgg16 = VGG16(include_top=False,
-              weights='imagenet',
-              input_tensor=None,
-              input_shape=(256,256,3))
+TENSORFLOW_WEIGHTS_PATH_NO_TOP = r"https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5"
 
 class FastStyleNet:
 
@@ -85,10 +81,17 @@ class FastStyleNet:
         return Model(inputs, out)
 
     def connect_vgg16(self):
+        vgg = VGG()
+        vgg16 = vgg.create_model()
 
         # Frozen all layers of vgg16.
         for l in vgg16.layers:
             l.trainable = False
+
+        print(vgg16.layers[ 2])
+        print(vgg16.layers[ 5])
+        print(vgg16.layers[ 9])
+        print(vgg16.layers[ 13])
 
         vgg16.layers[ 2].name = "y1"
         vgg16.layers[ 5].name = "y2"
@@ -104,11 +107,8 @@ class FastStyleNet:
 
         y0 = fsn(ip)
 
-        #ip2 = VGGNormalize()(ip)
-        #cy0 = VGGNormalize()(y0)
-
-        ip2 = SubMean()(ip)
-        cy0 = SubMean()(y0)
+        ip2 = VGGNormalize()(ip)
+        cy0 = VGGNormalize()(y0)
 
         # I think that it can be done more easily here...
         # Please give me some idea.
@@ -143,6 +143,61 @@ class FastStyleNet:
 
         train_model = Model(input=ip, output=[y1, y2, y3, y4, cy3, y0])
         return train_model, fsn
+
+class VGG():
+    def __init__(self, img_height=256, img_width=256):
+        self.img_height = img_height
+        self.img_width = img_width
+
+    def create_model(self):
+
+        ip = Input(shape=(self.img_width, self.img_height, 3))
+
+        x = Convolution2D(64, 3, 3, activation='relu', name='conv1_1')(ip)
+        x = Convolution2D(64, 3, 3, activation='relu', name='conv1_2', border_mode='same')(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+        x = Convolution2D(128, 3, 3, activation='relu', name='conv2_1', border_mode='same')(x)
+        x = Convolution2D(128, 3, 3, activation='relu', name='conv2_2', border_mode='same')(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_1', border_mode='same')(x)
+        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_2', border_mode='same')(x)
+        x = Convolution2D(256, 3, 3, activation='relu', name='conv3_3', border_mode='same')(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_1', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_2', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv4_3', border_mode='same')(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_1', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_2', border_mode='same')(x)
+        x = Convolution2D(512, 3, 3, activation='relu', name='conv5_3', border_mode='same')(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+        model = Model(ip, x)
+
+        weights_name = "vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5"
+        weights_path = TENSORFLOW_WEIGHTS_PATH_NO_TOP
+
+        weights = get_file(weights_name, weights_path, cache_subdir='models')
+        f = h5py.File(weights)
+
+        layer_names = [name for name in f.attrs['layer_names']]
+
+        for i, layer in enumerate(model.layers[-18:]):
+            g = f[layer_names[i]]
+            weights = [g[name] for name in g.attrs['weight_names']]
+            layer.set_weights(weights)
+        print('VGG Model weights loaded.')
+
+        # Freeze all VGG layers
+        for layer in model.layers[-19:]:
+            layer.trainable = False
+
+        self.model = model
+        return model
 
 if __name__ == "__main__":
     from keras.utils.visualize_util import plot

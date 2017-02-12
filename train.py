@@ -91,7 +91,6 @@ if args.bound:
     imagepaths = imagepaths[:args.bound]
 nb_data = len(imagepaths)
 
-
 style = np.asarray(Image.open(args.style_image).convert('RGB').resize((image_size,image_size)), dtype=np.float32)
 style = style.reshape((1,) + style.shape)
 style = preprocess_input(style)

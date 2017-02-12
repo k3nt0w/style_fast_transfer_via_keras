@@ -4,7 +4,6 @@ from keras import backend as K
 import numpy as np
 from PIL import Image
 import os
-from keras.applications.vgg16 import VGG16
 
 def load_image(path, size):
     image = Image.open(path).convert('RGB')
@@ -22,6 +21,8 @@ def load_image(path, size):
     return image[np.newaxis, :]
 
 def get_style_features(style_img):
+    vgg = VGG()
+    vgg16 = vgg.create_model()
 
     inputs = K.variable(style_img)
     h  = vgg16.layers[ 1](inputs)
