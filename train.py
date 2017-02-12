@@ -54,8 +54,7 @@ def style_reconstruction_loss(gram_s):
     """
     def loss_function(y_true, y_pred):
         gram_s_hat = gram_matrix(y_pred)
-        #return lambda_s * K.mean(K.square(gram_s_hat - gram_s))
-        return K.sum(gram_s)
+        return lambda_s * K.mean(K.square(gram_s_hat - gram_s))
     return loss_function
 
 def feature_reconstruction_loss(y_true, y_pred):
