@@ -54,7 +54,7 @@ def style_reconstruction_loss(gram_s):
     """
     def loss_function(y_true, y_pred):
         gram_s_hat = gram_matrix(y_pred)
-        return lambda_s * K.mean(K.square(gram_s_hat - gram_s))
+        return lambda_s * K.sum(K.square(gram_s_hat - gram_s))
     return loss_function
 
 def feature_reconstruction_loss(y_true, y_pred):
@@ -62,7 +62,7 @@ def feature_reconstruction_loss(y_true, y_pred):
     already calculated the square error.
     So, just calculate the average here.
     """
-    return lambda_f * K.mean(y_pred)
+    return lambda_f * K.sum(y_pred)
 
 def total_variation_loss(y_true, x):
     """I reffered to
@@ -73,7 +73,7 @@ def total_variation_loss(y_true, x):
     img_ncols = image_size
     a = K.square(x[:, :img_nrows - 1, :img_ncols - 1, :] - x[:, 1:, :img_ncols - 1, :])
     b = K.square(x[:, :img_nrows - 1, :img_ncols - 1, :] - x[:, :img_nrows - 1, 1:, :])
-    return lambda_tv*K.mean(K.pow(a + b, 1.25))
+    return lambda_tv*K.sum(K.pow(a + b, 1.25))
 
 # ---------------- train --------------------
 
