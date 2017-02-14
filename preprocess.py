@@ -22,13 +22,14 @@ def load_image(path, size):
     return x
 
 def get_style_features(style_img, height, width):
-    vgg = vgg16 = VGG16(include_top=False,
+    vgg16 = VGG16(include_top=False,
                   weights='imagenet',
                   input_tensor=None,
                   input_shape=(height, width, 3))
 
-    inputs = K.variable(style_img)
-    h  = vgg16.layers[ 1](inputs)
+    ip = K.variable(style_img)
+    h = VGGNormalize(height, width)(ip)
+    h  = vgg16.layers[ 1](ip)
     y1 = vgg16.layers[ 2](h)
     h  = vgg16.layers[ 3](h)
     h  = vgg16.layers[ 4](h)
@@ -44,30 +45,20 @@ def get_style_features(style_img, height, width):
 
     return [y1, y2, y3, y4]
 
-def preprocess_input(x, dim_ordering='default'):
-    """Preprocesses a tensor encoding a batch of images.
-    # Arguments
-        x: input Numpy tensor, 4D.
-        dim_ordering: data format of the image tensor.
-    # Returns
-        Preprocessed tensor.
-    """
-    if dim_ordering == 'default':
-        dim_ordering = K.image_dim_ordering()
-    assert dim_ordering in {'tf', 'th'}
+def preprocess_input(x):
+    # for numpy array
 
-    if dim_ordering == 'th':
-        # 'RGB'->'BGR'
-        x = x[:, ::-1, :, :]
-        # Zero-center by mean pixel
-        x[:, 0, :, :] -= 103.939
-        x[:, 1, :, :] -= 116.779
-        x[:, 2, :, :] -= 123.68
-    else:
-        # 'RGB'->'BGR'
-        x = x[:, :, :, ::-1]
-        # Zero-center by mean pixel
-        x[:, :, :, 0] -= 103.939
-        x[:, :, :, 1] -= 116.779
-        x[:, :, :, 2] -= 123.68
+    # 'RGB'->'BGR'
+    x = x[:, :, :, ::-1]
+    # Zero-center by mean pixel
+    x[:, :, :, 0] -= 103.939
+    x[:, :, :, 1] -= 116.779
+    x[:, :, :, 2] -= 123.68
     return x
+
+if __name__ == "__main__":
+    style = Image.open("sample_imgs/style_1.png").convert('RGB').resize((256,256))
+    #style = np.expand_dims(style, axis=0)
+    #style = preprocess_input(style)
+    #style_features = get_style_features(style, image_size, image_size)
+    style.show()

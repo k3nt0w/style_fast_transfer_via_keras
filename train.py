@@ -93,7 +93,6 @@ nb_data = len(imagepaths)
 
 style = np.asarray(Image.open(args.style_image).convert('RGB').resize((image_size,image_size)), dtype=np.float32)
 style = np.expand_dims(style, axis=0)
-style = preprocess_input(style)
 style_features = get_style_features(style, image_size, image_size)
 y1, y2, y3, y4 = [gram_matrix(y) for y in style_features]
 
@@ -129,7 +128,7 @@ def generate_arrays_from_file():
     while True:
         for path in imagepaths:
             contents_img = load_image(path, image_size)
-            yield (contents_img, [_1, _2, _3, _4, _5, _6])
+            yield ([contents_img, contents_img.copy()], [_1, _2, _3, _4, _5, _6])
 
 style_name = args.style_image.split("/")[-1].split(".")[0]
 
