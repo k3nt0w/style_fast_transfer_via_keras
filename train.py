@@ -92,9 +92,9 @@ if args.bound:
 nb_data = len(imagepaths)
 
 style = np.asarray(Image.open(args.style_image).convert('RGB').resize((image_size,image_size)), dtype=np.float32)
-style = style.reshape((1,) + style.shape)
+style = np.expand_dims(style, axis=0)
 style = preprocess_input(style)
-style_features = get_style_features(style)
+style_features = get_style_features(style, image_size, image_size)
 y1, y2, y3, y4 = [gram_matrix(y) for y in style_features]
 
 fsn = FastStyleNet()
