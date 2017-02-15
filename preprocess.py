@@ -1,4 +1,5 @@
 from model import *
+from loss import *
 from keras import backend as K
 
 import numpy as np
@@ -27,7 +28,7 @@ def get_style_features(style_img, height, width):
                   input_tensor=None,
                   input_shape=(height, width, 3))
 
-    ip = K.variable(style_img)
+    ip = Input((height, width, 3))
     h = VGGNormalize(height, width)(ip)
     h  = vgg16.layers[ 1](ip)
     y1 = vgg16.layers[ 2](h)
@@ -42,19 +43,11 @@ def get_style_features(style_img, height, width):
     h  = vgg16.layers[11](h)
     h  = vgg16.layers[12](h)
     y4 = vgg16.layers[13](h)
+    model = Model(ip, [y1, y2, y3, y4])
+    style_features = [gram_matrix(y) for y in [y1, y2, y3, y4]]
 
-    return [y1, y2, y3, y4]
-
-def get_vgg_style_features(vgg16, style_img):
-    '''
-    Function to get style features of VGG model
-    Args:
-        input_img: input image of shape determined by image_dim_ordering
-    Returns: list of VGG output features
-    '''
-    vgg_style_func = K.function([vgg16.layers[-19].input], self.style_layer_outputs)
-
-    return vgg_style_func([style_img])
+    style_feature_func = K.function([model.input], style_features)
+    return style_feature_func([style_img])
 
 def preprocess_input(x):
     # for numpy array
