@@ -19,7 +19,7 @@ parser.add_argument('--weight', '-w', default="", type=str)
 parser.add_argument('--lambda_tv', default=1e-6, type=float,
                     help='weight of total variation regularization according to the paper to be set between 10e-4 and 10e-6.')
 parser.add_argument('--lambda_feat', default=1.0, type=float)
-parser.add_argument('--lambda_style', default=5.0, type=float)
+parser.add_argument('--lambda_style', default=10.0, type=float)
 parser.add_argument('--epoch', '-e', default=2, type=int)
 parser.add_argument('--batchsize', '-b', default=1, type=int)
 parser.add_argument('--lr', '-l', default=1e-3, type=float)
@@ -54,7 +54,6 @@ def style_reconstruction_loss(gram_s):
     """
     def loss_function(y_true, y_pred):
         gram_s_hat = gram_matrix(y_pred)
-        diff = gram_s_hat - gram_s
         return lambda_s * K.sum(K.square(gram_s_hat - gram_s))
     return loss_function
 
@@ -63,7 +62,7 @@ def feature_reconstruction_loss(y_true, y_pred):
     already calculated the square error.
     So, just calculate the average here.
     """
-    nrow, ncol, nch = K.int_shape(y_pred)
+    batch, nrow, ncol, nch = K.int_shape(y_pred)
 
     return lambda_f * K.sum(y_pred) / (nrow * ncol * nch)
 
@@ -99,11 +98,11 @@ style = np.expand_dims(style, axis=0)
 style_features = get_style_features(style, image_size, image_size)
 y1, y2, y3, y4 = [gram_matrix(y) for y in style_features]
 
-fsn = FastStyleNet()
-model, fsn_model = fsn.connect_vgg16()
+fsn = FastStyleNet(train_flag=True)
+model = fsn.create_model()
 
-if len(args.weight) > 0:
-    fsn.load_weights(args.weight)
+#if len(args.weight) > 0:
+#    model.load_weights(args.weight)
 
 adam = Adam(lr=args.lr)
 model.compile(optimizer=adam,
@@ -131,16 +130,17 @@ def generate_arrays_from_file():
     while True:
         for path in imagepaths:
             contents_img = load_image(path, image_size)
-            yield ([contents_img, contents_img.copy()], [_1, _2, _3, _4, _5, _6])
+            yield ([contents_img, contents_img.copy()],
+                   [_1, _2, _3, _4, _5, _6])
+
 
 style_name = args.style_image.split("/")[-1].split(".")[0]
 
 print('Num traning images:', nb_data)
 print(nb_data, 'iterations,', nb_epoch, 'epochs')
+
 model.fit_generator(generate_arrays_from_file(),
                     samples_per_epoch=nb_data,
                     nb_epoch=nb_epoch)
-if not os.path.exists("./weights"):
-    os.mkdir("weights")
-fsn_model.save_weights("./weights/{}.hdf5".format(style_name))
-print("Saved weights")
+
+fsn.save_fastnet_weights(style_name, directory="weights/")

@@ -44,7 +44,7 @@ class VGGNormalize(Layer):
         return x
 
     def make_mean_tensor(self):
-        x = np.empty((1,self.height,self.height,3))
+        x = np.empty((1,self.height,self.width,3))
         x[:, :, :, 0] = 103.939
         x[:, :, :, 1] = 116.779
         x[:, :, :, 2] = 123.68

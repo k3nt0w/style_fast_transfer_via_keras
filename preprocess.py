@@ -45,6 +45,17 @@ def get_style_features(style_img, height, width):
 
     return [y1, y2, y3, y4]
 
+def get_vgg_style_features(vgg16, style_img):
+    '''
+    Function to get style features of VGG model
+    Args:
+        input_img: input image of shape determined by image_dim_ordering
+    Returns: list of VGG output features
+    '''
+    vgg_style_func = K.function([vgg16.layers[-19].input], self.style_layer_outputs)
+
+    return vgg_style_func([style_img])
+
 def preprocess_input(x):
     # for numpy array
 

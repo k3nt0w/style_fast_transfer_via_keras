@@ -14,7 +14,7 @@ import numpy as np
 
 class FastStyleNet:
 
-    def __init__(self, img_height=256, img_width=256):
+    def __init__(self, img_height=256, img_width=256, train_flag=True):
         self.img_height = img_height
         self.img_width = img_width
 
@@ -35,7 +35,7 @@ class FastStyleNet:
         m = merge([h, x], mode='sum')
         return m
 
-    def create_model(self):
+    def create_model(self, train=True):
         # use "tf" dim-ordering
         inputs = Input((self.img_height, self.img_width, 3))
 
@@ -74,32 +74,26 @@ class FastStyleNet:
         h = Deconvolution2D(3, 9, 9, activation="tanh", border_mode="same", subsample=(1, 1),
                                  output_shape=(1, self.img_height, self.img_width, 3),
                                  name="deconv1")(h)
-        out = Denormalize()(h)
+        y = Denormalize()(h)
 
-        return Model(inputs, out)
+        if not train:
+            return Model(inputs, y)
 
-    def connect_vgg16(self):
+        yc = Input((self.img_height, self.img_width, 3), name="contents_image")
+
+        outputs = self.connect_vgg16(y, yc)
+        self.model = Model([inputs, yc], outputs)
+        return self.model
+
+    def connect_vgg16(self, y, yc):
         vgg16 = VGG16(include_top=False,
                       weights='imagenet',
                       input_tensor=None,
                       input_shape=(self.img_height, self.img_width, 3))
 
-        vgg16_2 = VGG16(include_top=False,
-                      weights='imagenet',
-                      input_tensor=None,
-                      input_shape=(self.img_height, self.img_width, 3))
-
-        namelist = list()
-        for l in vgg16.layers:
-            namelist.append(l.name)
-
-        for i, l in enumerate(vgg16_2.layers):
-            l.name = "{}_2".format(namelist[i])
-
         # Frozen all layers of vgg16.
-        for l, l2 in zip(vgg16.layers, vgg16_2.layers):
+        for l in vgg16.layers:
             l.trainable = False
-            l2.trainable = False
 
         vgg16.layers[ 2].name = "y1"
         vgg16.layers[ 5].name = "y2"
@@ -108,54 +102,85 @@ class FastStyleNet:
 
         # We need connect FastStyleNet and vgg16
         # to train FastStyleNet.
-        fsn = self.create_model()
-        fsn.name = "FastStyleNet"
-
-        ip1 = Input((self.img_height, self.img_width, 3), name="input1")
-        y0 = fsn(ip1)
-        cy0 = VGGNormalize(self.img_height, self.img_width)(y0)
-
-        """I think that it can be done more easily here...
-        Please give me some idea."""
-        h  = vgg16.layers[1](cy0)
-        y1 = vgg16.layers[2](h)
-        h  = vgg16.layers[3](y1)
-        h  = vgg16.layers[4](h)
-        y2 = vgg16.layers[5](h)
-        h  = vgg16.layers[6](y2)
-        h  = vgg16.layers[7](h)
-        h  = vgg16.layers[8](h)
-        y3 = vgg16.layers[9](h)
+        h  = VGGNormalize(self.img_height, self.img_width, name="VGGNormalize")(y)
+        h  = vgg16.layers[ 1](h)
+        y1 = vgg16.layers[ 2](h)
+        h  = vgg16.layers[ 3](y1)
+        h  = vgg16.layers[ 4](h)
+        y2 = vgg16.layers[ 5](h)
+        h  = vgg16.layers[ 6](y2)
+        h  = vgg16.layers[ 7](h)
+        h  = vgg16.layers[ 8](h)
+        y3 = vgg16.layers[ 9](h)
         h  = vgg16.layers[10](y3)
         h  = vgg16.layers[11](h)
         h  = vgg16.layers[12](h)
         y4 = vgg16.layers[13](h)
 
-        # to get contents featuer from conv3_3
-        ip2 = Input((self.img_height, self.img_width, 3), name="input2")
-        h = VGGNormalize(self.img_height, self.img_width)(ip2)
-        h = vgg16_2.layers[1](h)
-        h = vgg16_2.layers[2](h)
-        h = vgg16_2.layers[3](h)
-        h = vgg16_2.layers[4](h)
-        h = vgg16_2.layers[5](h)
-        h = vgg16_2.layers[6](h)
-        h = vgg16_2.layers[7](h)
-        h = vgg16_2.layers[8](h)
-        cy3 = vgg16_2.layers[9](h)
+        h  = VGGNormalize(self.img_height, self.img_width, name="VGGNormalize2")(yc)
+        h  = vgg16.layers[ 1](h)
+        h  = vgg16.layers[ 2](h)
+        h  = vgg16.layers[ 3](h)
+        h  = vgg16.layers[ 4](h)
+        h  = vgg16.layers[ 5](h)
+        h  = vgg16.layers[ 6](h)
+        h  = vgg16.layers[ 7](h)
+        h  = vgg16.layers[ 8](h)
+        yc3 = vgg16.layers[ 9](h)
 
-        # Calculating the square error in this layer has no problem.
-        cy3 = merge(inputs=[cy3, y3],
+        yc3 = merge(inputs=[yc3, y3],
                     output_shape=(64, 64, 256),
                     mode=lambda T: K.square(T[0]-T[1]))
 
-        train_model = Model(input=[ip1,ip2], output=[y1, y2, y3, y4, cy3, y0])
-        return train_model, fsn
+        return  [y1, y2, y3, y4, yc3, y]
+
+    def save_fastnet_weights(self, style_name, directory=None):
+        '''
+        Saves the weights of the FastNet model.
+        It creates a temporary save file having the weights of FastNet + VGG,
+        loads the weights into just the FastNet model and then deletes the
+        FastNet + VGG weights.
+        Args:
+            style_name: style image name
+            directory: base directory of saved weights
+        '''
+        import os
+
+        if directory is not None:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+            full_weights_fn = directory + "temp.h5"
+        else:
+            full_weights_fn = "temp.h5"
+
+        self.model.save_weights(filepath=full_weights_fn, overwrite=True)
+        f = h5py.File(full_weights_fn)
+
+        layer_names = [name for name in f.attrs['layer_names']]
+
+        fsn_model = self.create_model(train=False)
+
+        for i, layer in enumerate(fsn_model.layers):
+            g = f[layer_names[i]]
+            weights = [g[name] for name in g.attrs['weight_names']]
+            layer.set_weights(weights)
+
+        if directory is not None:
+            weights_fn = directory + "{}.h5".format(style_name)
+        else:
+            weights_fn = "{}.h5".format(style_name)
+
+        fsn_model.save_weights(weights_fn, overwrite=True)
+
+        f.close()
+        os.remove(full_weights_fn)  # The full weights aren't needed anymore since we only need 1 forward pass
+                                    # through the fastnet now.
+        print("Saved fastnet weights for style : %s.h5" % style_name)
 
 if __name__ == "__main__":
     from keras.utils.visualize_util import plot
-    fsn = FastStyleNet()
-    model, fsn_model = fsn.connect_vgg16()
-    model.summary()
-    plot(fsn_model, "fsn.png", show_shapes=True)
+    fsn = FastStyleNet(train_flag=True)
+    model = fsn.create_model()
+    #plot(fsn.model, "fsn.png", show_shapes=True)
     plot(model, "train_model.png", show_shapes=True)
